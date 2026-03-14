@@ -1,0 +1,5 @@
+{
+  "name": "OBS Titler Pro",
+  "description": "Un titulador moderno para OBS que permite crear, editar y controlar overlays en tiempo real desde cualquier dispositivo.",
+  "requestFramePermissions": []
+}
