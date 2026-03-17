@@ -674,12 +674,23 @@ export default function ControlPanel() {
                         <button
                           onClick={() => handleToggle(overlay.id, overlay.active)}
                           className={cn(
-                            "w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2",
+                            "w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden",
                             overlay.active
                               ? "bg-emerald-500 text-zinc-900 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 border border-black/5"
+                              : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-white/10"
                           )}
                         >
+                          {overlay.autoDeactivateDuration > 0 && (
+                            <div className="absolute top-2 right-2">
+                              <div 
+                                className="w-1.5 h-1.5 rounded-full animate-pulse shadow-lg"
+                                style={{ 
+                                  backgroundColor: overlay.color,
+                                  boxShadow: `0 0 8px ${overlay.color}`
+                                }} 
+                              />
+                            </div>
+                          )}
                           {overlay.active ? (
                             <>
                               <Square size={14} fill="currentColor" />
@@ -893,6 +904,17 @@ export default function ControlPanel() {
                   boxShadow: overlay.active ? `0 0 30px ${overlay.color}44, inset 0 0 15px ${overlay.color}22` : 'inset 0 0 15px rgba(0,0,0,0.5)',
                 }}
               >
+                {overlay.autoDeactivateDuration > 0 && (
+                  <div className="absolute top-2 right-2 z-20">
+                    <div 
+                      className="w-1.5 h-1.5 rounded-full animate-pulse shadow-lg"
+                      style={{ 
+                        backgroundColor: overlay.color,
+                        boxShadow: `0 0 8px ${overlay.color}`
+                      }} 
+                    />
+                  </div>
+                )}
                 {/* Screen Effect */}
                 <div className="absolute inset-1 rounded-[16px] bg-zinc-900/40 pointer-events-none overflow-hidden">
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
