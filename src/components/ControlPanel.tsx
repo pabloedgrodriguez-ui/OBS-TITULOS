@@ -51,6 +51,8 @@ export default function ControlPanel() {
   const [user, setUser] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [systemStats, setSystemStats] = useState({
     cpu: 12,
     ram: 45,
@@ -147,11 +149,16 @@ export default function ControlPanel() {
   }, [overlays]);
 
   const handleLogin = async () => {
+    setLoginError(null);
+    setIsLoggingIn(true);
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      setLoginError(error.message || "Error al iniciar sesión");
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -428,6 +435,11 @@ export default function ControlPanel() {
           </div>
 
           <div className="flex items-center gap-3">
+            {loginError && (
+              <div className="absolute top-full mt-2 right-0 bg-red-50 text-red-600 text-[10px] px-3 py-1.5 rounded-lg border border-red-100 shadow-sm whitespace-nowrap z-50">
+                {loginError}
+              </div>
+            )}
             {user ? (
               <div className="flex items-center gap-3 mr-4">
                 <div className="flex flex-col items-end">
@@ -452,10 +464,14 @@ export default function ControlPanel() {
             ) : (
               <button 
                 onClick={handleLogin}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 mr-4"
+                disabled={isLoggingIn}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 mr-4",
+                  isLoggingIn ? "bg-emerald-700 cursor-wait" : "bg-emerald-600 hover:bg-emerald-500"
+                )}
               >
-                <LogIn size={14} />
-                <span>Iniciar Sesión</span>
+                <LogIn size={14} className={isLoggingIn ? "animate-spin" : ""} />
+                <span>{isLoggingIn ? 'Iniciando...' : 'Iniciar Sesión'}</span>
               </button>
             )}
             <button 
