@@ -50,6 +50,7 @@ export default function ControlPanel() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'settings'>('dashboard');
   const [user, setUser] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [systemStats, setSystemStats] = useState({
     cpu: 12,
     ram: 45,
@@ -309,7 +310,7 @@ export default function ControlPanel() {
       <motion.aside 
         initial={false}
         animate={{ width: isSidebarCollapsed ? 80 : 256 }}
-        className="border-r border-black/5 bg-white flex flex-col relative z-20"
+        className="border-r border-black/5 bg-white flex-col relative z-20 hidden md:flex"
       >
         <div className="p-6">
           <div className={cn("flex items-center gap-3 mb-8", isSidebarCollapsed ? "justify-center" : "")}>
@@ -400,11 +401,17 @@ export default function ControlPanel() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-20 border-b border-black/5 bg-black/50 backdrop-blur-md flex items-center justify-between px-8 z-10">
-          <div className="flex items-center gap-6">
-            <h2 className="text-xl font-display font-bold tracking-tight capitalize">{activeTab}</h2>
-            <div className="h-4 w-[1px] bg-black/10" />
-            <div className="flex items-center gap-4 text-xs font-mono text-zinc-500">
+        <header className="h-20 border-b border-black/5 bg-black/50 backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-10">
+          <div className="flex items-center gap-3 md:gap-6">
+            <button 
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 hover:bg-black/5 rounded-xl md:hidden text-zinc-500"
+            >
+              <Menu size={20} />
+            </button>
+            <h2 className="text-lg md:text-xl font-display font-bold tracking-tight capitalize">{activeTab}</h2>
+            <div className="h-4 w-[1px] bg-black/10 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-4 text-xs font-mono text-zinc-500">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span>LIVE MONITOR</span>
@@ -418,8 +425,8 @@ export default function ControlPanel() {
 
           <div className="flex items-center gap-3">
             {user && (
-              <div className="flex items-center gap-3 mr-4">
-                <div className="flex flex-col items-end">
+              <div className="flex items-center gap-3 mr-2 md:mr-4">
+                <div className="hidden md:flex flex-col items-end">
                   <span className="text-xs font-bold text-zinc-900">{user.displayName}</span>
                   <span className="text-[10px] text-zinc-500">{user.email}</span>
                 </div>
@@ -441,26 +448,55 @@ export default function ControlPanel() {
             )}
             <button 
               onClick={() => window.open('/?view=overlay', '_blank')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold uppercase tracking-widest transition-all border border-black/5"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold uppercase tracking-widest transition-all border border-black/5"
             >
               <ExternalLink size={14} />
-              <span>OBS View</span>
+              <span className="hidden sm:inline">OBS View</span>
             </button>
             <button 
               onClick={() => {
                 setEditingOverlay(DEFAULT_OVERLAY);
                 setIsModalOpen(true);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
+              className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
             >
               <Plus size={16} />
-              <span>Nuevo Overlay</span>
+              <span className="hidden sm:inline">Nuevo Overlay</span>
             </button>
           </div>
         </header>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar pb-48">
+        <div className={cn(
+          "flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-48",
+          showMobileMenu ? "block" : "hidden md:block"
+        )}>
+          {showMobileMenu && (
+            <div className="md:hidden mb-8 space-y-2">
+              {[
+                { id: 'dashboard', icon: Layout, label: 'Mis Overlays' },
+                { id: 'library', icon: Layers, label: 'Plantillas' },
+                { id: 'settings', icon: Settings, label: 'Ajustes' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as any);
+                    setShowMobileMenu(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                    activeTab === item.id 
+                      ? "bg-emerald-500 text-zinc-900 shadow-lg shadow-emerald-500/20" 
+                      : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                  )}
+                >
+                  <item.icon size={18} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {activeTab === 'dashboard' && (
             <div className="max-w-7xl mx-auto space-y-8">
               {/* Stats Grid */}
@@ -872,30 +908,34 @@ export default function ControlPanel() {
         </div>
 
         {/* Bottom Controller Band */}
-        <div className="h-40 bg-zinc-900 border-t border-white/10 flex items-center px-8 gap-8 overflow-x-auto custom-scrollbar shadow-[0_-20px_50px_rgba(0,0,0,0.5)] z-20 relative">
+        <div className={cn(
+          "bg-zinc-900 border-t border-white/10 flex flex-col md:flex-row items-center px-4 md:px-8 gap-4 md:gap-8 overflow-x-auto custom-scrollbar shadow-[0_-20px_50px_rgba(0,0,0,0.5)] z-20 relative transition-all duration-500",
+          "h-full md:h-40 flex-1 md:flex-none",
+          showMobileMenu ? "hidden md:flex" : "flex"
+        )}>
           {/* Hardware Texture Overlay */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
           
-          <div className="flex flex-col min-w-[140px] border-r border-white/10 pr-8 mr-2 z-10">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start w-full md:w-auto md:min-w-[140px] md:border-r border-white/10 md:pr-8 md:mr-2 z-10 py-4 md:py-0">
+            <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Live Deck</span>
             </div>
             <button 
               onClick={() => overlays.forEach(o => o.active && handleToggle(o.id, true))}
-              className="w-full px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-900/20"
+              className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-900/20 md:w-full md:mt-3"
             >
               Master Off
             </button>
           </div>
           
-          <div className="flex items-center gap-6 py-4 z-10">
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-4 md:gap-6 py-4 z-10 w-full overflow-y-auto md:overflow-y-visible max-h-[70vh] md:max-h-none">
             {overlays.map((overlay) => (
               <button
                 key={overlay.id}
                 onClick={() => handleToggle(overlay.id, overlay.active)}
                 className={cn(
-                  "relative w-24 h-24 rounded-[20px] transition-all duration-300 flex flex-col items-center justify-center group overflow-hidden flex-shrink-0",
+                  "relative w-28 h-28 md:w-24 md:h-24 rounded-[20px] transition-all duration-300 flex flex-col items-center justify-center group overflow-hidden flex-shrink-0",
                   "bg-zinc-950 border-4",
                   overlay.active ? "scale-95" : "border-zinc-800 hover:border-zinc-700 hover:scale-105"
                 )}
@@ -947,7 +987,7 @@ export default function ControlPanel() {
                 setEditingOverlay(DEFAULT_OVERLAY);
                 setIsModalOpen(true);
               }}
-              className="w-24 h-24 rounded-[20px] border-4 border-dashed border-zinc-800 bg-zinc-950/50 flex flex-col items-center justify-center text-zinc-700 hover:text-zinc-500 hover:border-zinc-700 transition-all group flex-shrink-0"
+              className="w-28 h-28 md:w-24 md:h-24 rounded-[20px] border-4 border-dashed border-zinc-800 bg-zinc-950/50 flex flex-col items-center justify-center text-zinc-700 hover:text-zinc-500 hover:border-zinc-700 transition-all group flex-shrink-0"
             >
               <Plus size={24} className="mb-1 group-hover:scale-110 transition-transform" />
               <span className="text-[8px] font-black uppercase tracking-widest">Nuevo</span>
