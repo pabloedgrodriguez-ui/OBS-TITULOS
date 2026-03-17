@@ -40,17 +40,21 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
+  const [search, setSearch] = useState(window.location.search);
 
   useEffect(() => {
     const handleLocationChange = () => {
       setPath(window.location.pathname);
+      setSearch(window.location.search);
     };
 
     window.addEventListener('popstate', handleLocationChange);
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  const content = path === '/overlay' ? <OverlayView /> : <ControlPanel />;
+  const params = new URLSearchParams(search);
+  const isOverlay = path === '/overlay' || params.get('view') === 'overlay';
+  const content = isOverlay ? <OverlayView /> : <ControlPanel />;
 
   return (
     <ErrorBoundary>

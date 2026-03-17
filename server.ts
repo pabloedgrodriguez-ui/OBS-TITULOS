@@ -15,6 +15,15 @@ async function startServer() {
       res.json({ status: "ok", timestamp: new Date().toISOString() });
     });
 
+    // Explicit route for overlay to avoid 404s on some proxies
+    app.get("/overlay", (req, res, next) => {
+      if (process.env.NODE_ENV === "production") {
+        res.sendFile(path.join(process.cwd(), "dist", "index.html"));
+      } else {
+        next(); // Let Vite handle it
+      }
+    });
+
     // Vite middleware for development
     if (process.env.NODE_ENV !== "production") {
       const vite = await createViteServer({

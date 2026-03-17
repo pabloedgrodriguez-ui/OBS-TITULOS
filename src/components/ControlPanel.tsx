@@ -459,7 +459,7 @@ export default function ControlPanel() {
               </button>
             )}
             <button 
-              onClick={() => window.open('/overlay', '_blank')}
+              onClick={() => window.open('/?view=overlay', '_blank')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold uppercase tracking-widest transition-all border border-black/5"
             >
               <ExternalLink size={14} />
