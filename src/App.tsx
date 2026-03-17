@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ControlPanel from './components/ControlPanel';
 import OverlayView from './components/OverlayView';
+import { auth } from './firebase';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { LogIn, Shield, Zap, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -38,9 +42,99 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+function LoginScreen() {
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    setError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Error al iniciar sesión");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6 font-sans selection:bg-emerald-500/30">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-[32px] p-8 shadow-2xl shadow-black/50">
+          <div className="flex justify-center mb-8">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+              <Shield className="text-emerald-500" size={32} />
+            </div>
+          </div>
+
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Overlay Studio</h1>
+            <p className="text-zinc-400 text-sm">Inicia sesión para gestionar tus overlays en tiempo real</p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={handleLogin}
+              disabled={isLoggingIn}
+              className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-black rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+              {isLoggingIn ? (
+                <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+              ) : (
+                <LogIn size={18} />
+              )}
+              <span>{isLoggingIn ? 'Conectando...' : 'Entrar con Google'}</span>
+            </button>
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center"
+              >
+                {error}
+              </motion.div>
+            )}
+          </div>
+
+          <div className="mt-10 pt-8 border-t border-white/5 flex justify-between items-center px-2">
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Activity size={14} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Cloud Ready</span>
+            </div>
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Zap size={14} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Real-time</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center mt-8 text-zinc-600 text-[10px] font-medium uppercase tracking-[0.2em]">
+          Powered by Firebase & Gemini
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [search, setSearch] = useState(window.location.search);
+  const [user, setUser] = useState<any>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -49,16 +143,50 @@ export default function App() {
     };
 
     window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsAuthReady(true);
+    });
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      unsubscribe();
+    };
   }, []);
 
   const params = new URLSearchParams(search);
   const isOverlay = path === '/overlay' || params.get('view') === 'overlay';
-  const content = isOverlay ? <OverlayView /> : <ControlPanel />;
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If it's the overlay view, show it without login (for OBS)
+  if (isOverlay) {
+    return (
+      <ErrorBoundary>
+        <OverlayView />
+      </ErrorBoundary>
+    );
+  }
+
+  // If it's the control panel, require login
+  if (!user) {
+    return (
+      <ErrorBoundary>
+        <LoginScreen />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
-      {content}
+      <ControlPanel />
     </ErrorBoundary>
   );
 }
