@@ -13,7 +13,7 @@ export interface Overlay {
   positionX: number;
   positionY: number;
   animationType: 'slide-left' | 'slide-right' | 'fade' | 'zoom';
-  layoutType: 'standard' | 'graft' | 'minimal' | 'ticker' | 'sports-scoreboard' | 'social-popup' | 'live-title';
+  layoutType: 'standard' | 'graft' | 'minimal' | 'ticker' | 'sports-scoreboard' | 'social-popup' | 'live-title' | 'background-only';
   styleVariant: string;
   fontFamily: 'sans' | 'serif' | 'mono';
   borderRadius: number;

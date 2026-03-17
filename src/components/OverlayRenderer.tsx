@@ -413,6 +413,21 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
           </div>
         </div>
       )}
+      {overlay.layoutType === 'background-only' && (
+        <div 
+          className="bg-cover bg-center bg-no-repeat transition-all duration-500"
+          style={{ 
+            width: overlay.width && overlay.width > 0 ? `${overlay.width}px` : '1920px',
+            height: overlay.height && overlay.height > 0 ? `${overlay.height}px` : '1080px',
+            borderRadius: `${overlay.borderRadius || 0}px`,
+            backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
+            backgroundColor: overlay.bgColor || 'transparent',
+            opacity: overlay.styleVariant === 'overlay' ? 0.5 : 1,
+            boxShadow: overlay.styleVariant === 'glow' ? `0 0 50px ${overlay.color}44` : 'none',
+            border: overlay.styleVariant === 'border' ? `4px solid ${overlay.color}` : 'none'
+          }}
+        />
+      )}
     </div>
   );
 }

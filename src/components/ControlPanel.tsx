@@ -68,6 +68,7 @@ export default function ControlPanel() {
     { id: 't8', title: 'BIG ANNOUNCEMENT', subtitle: 'SPECIAL BROADCAST', layoutType: 'live-title', styleVariant: 'uppercase', color: '#ef4444', bgColor: 'transparent', fontSizeTitle: 120, fontSizeSubtitle: 16, positionX: 10, positionY: 50, width: 1500, height: 400, autoDeactivateDuration: 0 },
     { id: 't6', title: 'SPORTS SCOREBOARD', subtitle: 'Q1', layoutType: 'sports-scoreboard', styleVariant: 'default', color: '#3b82f6', bgColor: '#18181b', fontSizeTitle: 24, fontSizeSubtitle: 16, width: 450, height: 80, positionX: 5, positionY: 5, customData: { teamA: 'HOME', teamB: 'AWAY', scoreA: 0, scoreB: 0, period: '1ST QTR' }, autoDeactivateDuration: 0 },
     { id: 't7', title: 'SOCIAL POPUP', subtitle: '@username', layoutType: 'social-popup', styleVariant: 'twitter', color: '#1da1f2', bgColor: '#ffffff', textColor: '#0f1419', fontSizeTitle: 20, fontSizeSubtitle: 16, width: 400, height: 100, positionX: 5, positionY: 85, customData: { platform: 'twitter', handle: '@streamer', message: 'Follow me for more updates!' }, autoDeactivateDuration: 0 },
+    { id: 't9', title: 'FONDO FULL HD', subtitle: '', layoutType: 'background-only', styleVariant: 'default', color: '#10b981', bgColor: '#000000', width: 1920, height: 1080, positionX: 50, positionY: 50, autoDeactivateDuration: 0 },
   ];
 
   useEffect(() => {
@@ -1288,6 +1289,7 @@ export default function ControlPanel() {
                             <option value="sports-scoreboard">Marcador Deportivo</option>
                             <option value="social-popup">Popup Social</option>
                             <option value="live-title">Live Title (Impacto)</option>
+                            <option value="background-only">Fondo / Background</option>
                           </select>
                         </div>
                         <div className="space-y-2">
@@ -1320,6 +1322,14 @@ export default function ControlPanel() {
                               <>
                                 <option value="default">Normal</option>
                                 <option value="uppercase">Todo Mayúsculas</option>
+                              </>
+                            )}
+                            {editingOverlay?.layoutType === 'background-only' && (
+                              <>
+                                <option value="default">Normal</option>
+                                <option value="overlay">Overlay (50% Opacidad)</option>
+                                <option value="glow">Glow (Brillo)</option>
+                                <option value="border">Con Borde</option>
                               </>
                             )}
                           </select>
