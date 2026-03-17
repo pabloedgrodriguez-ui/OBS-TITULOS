@@ -1,0 +1,136 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// This security rules file assumes the following data structures:
+//
+// Collection: overlays
+// Document ID: {overlayId}
+// Fields:
+//   - id: string (required) - Unique identifier
+//   - name: string (required) - Internal name
+//   - title: string (required) - Main title
+//   - subtitle: string (optional) - Subtitle
+//   - color: string (optional) - Primary color
+//   - active: boolean (required) - Visibility status
+//   - fontSizeTitle: number (optional) - Title font size
+//   - fontSizeSubtitle: number (optional) - Subtitle font size
+//   - bgColor: string (optional) - Background color
+//   - textColor: string (optional) - Text color
+//   - positionX: number (optional) - X position %
+//   - positionY: number (optional) - Y position %
+//   - animationType: string (optional) - Animation type
+//   - layoutType: string (optional) - Layout type
+//   - styleVariant: string (optional) - Style variant
+//   - fontFamily: string (optional) - Font family
+//   - borderRadius: number (optional) - Border radius
+//   - width: number (optional) - Width in px
+//   - height: number (optional) - Height in px
+//   - rotation: number (optional) - Rotation in deg
+//   - bgImage: string (optional) - Base64 image
+//   - shortcut: string (optional) - Keyboard shortcut
+//   - customData: map (optional) - Extra data
+//   - titleX: number (optional) - Title X offset
+//   - titleY: number (optional) - Title Y offset
+//   - subtitleX: number (optional) - Subtitle X offset
+//   - subtitleY: number (optional) - Subtitle Y offset
+//   - textAlign: string (optional) - Text alignment
+//   - autoDeactivateDuration: number (optional) - Timer in seconds
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "pabloedgrodriguez@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidOverlay(data) {
+      return hasRequiredFields(['id', 'name', 'title', 'active']) &&
+        data.id is string && data.id.size() > 0 &&
+        data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+        data.title is string && data.title.size() < 500 &&
+        data.active is bool &&
+        (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() < 500)) &&
+        (!('color' in data) || (data.color is string && data.color.size() < 20)) &&
+        (!('fontSizeTitle' in data) || (data.fontSizeTitle is number)) &&
+        (!('fontSizeSubtitle' in data) || (data.fontSizeSubtitle is number)) &&
+        (!('bgColor' in data) || (data.bgColor is string && data.bgColor.size() < 20)) &&
+        (!('textColor' in data) || (data.textColor is string && data.textColor.size() < 20)) &&
+        (!('positionX' in data) || (data.positionX is number)) &&
+        (!('positionY' in data) || (data.positionY is number)) &&
+        (!('animationType' in data) || (data.animationType is string)) &&
+        (!('layoutType' in data) || (data.layoutType is string)) &&
+        (!('styleVariant' in data) || (data.styleVariant is string)) &&
+        (!('fontFamily' in data) || (data.fontFamily is string)) &&
+        (!('borderRadius' in data) || (data.borderRadius is number)) &&
+        (!('width' in data) || (data.width is number)) &&
+        (!('height' in data) || (data.height is number)) &&
+        (!('rotation' in data) || (data.rotation is number)) &&
+        (!('bgImage' in data) || (data.bgImage is string && data.bgImage.size() < 1048576)) && // 1MB limit for base64
+        (!('shortcut' in data) || (data.shortcut is string && data.shortcut.size() < 10)) &&
+        (!('customData' in data) || (data.customData is map)) &&
+        (!('titleX' in data) || (data.titleX is number)) &&
+        (!('titleY' in data) || (data.titleY is number)) &&
+        (!('subtitleX' in data) || (data.subtitleX is number)) &&
+        (!('subtitleY' in data) || (data.subtitleY is number)) &&
+        (!('textAlign' in data) || (data.textAlign is string)) &&
+        (!('autoDeactivateDuration' in data) || (data.autoDeactivateDuration is number));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /overlays/{overlayId} {
+      // Allow public read (necessary for OBS integration and public overlay view)
+      allow read: if true;
+      
+      // Allow write only for admins
+      allow create: if isAdmin() && isValidOverlay(request.resource.data);
+      allow update: if isAdmin() && isValidOverlay(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId && request.resource.data.role == 'user';
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId && request.resource.data.role == resource.data.role);
+    }
+    
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

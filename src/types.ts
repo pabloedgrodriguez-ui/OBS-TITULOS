@@ -29,4 +29,5 @@ export interface Overlay {
   subtitleX?: number;
   subtitleY?: number;
   textAlign?: 'left' | 'center' | 'right';
+  autoDeactivateDuration?: number; // in seconds, 0 means no auto-deactivation
 }

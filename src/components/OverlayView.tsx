@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'motion/react';
 import { Overlay } from '../types';
-import { cn } from '../lib/utils';
-
 import OverlayRenderer from './OverlayRenderer';
-
-const socket: Socket = io();
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 
 export default function OverlayView() {
   const [activeOverlays, setActiveOverlays] = useState<Overlay[]>([]);
@@ -45,43 +42,15 @@ export default function OverlayView() {
   }, []);
 
   useEffect(() => {
-    // Initial fetch
-    fetch('/api/overlays')
-      .then(res => res.json())
-      .then(data => {
-        setActiveOverlays(data.filter((o: Overlay) => o.active));
-      });
-
-    socket.on('overlay_toggled', ({ id, active }) => {
-      if (active) {
-        fetch('/api/overlays')
-          .then(res => res.json())
-          .then(data => {
-            const overlay = data.find((o: Overlay) => o.id === id);
-            if (overlay) {
-              setActiveOverlays(prev => {
-                const filtered = prev.filter(o => o.id !== id);
-                return [...filtered, overlay];
-              });
-            }
-          });
-      } else {
-        setActiveOverlays(prev => prev.filter(o => o.id !== id));
-      }
+    const q = query(collection(db, 'overlays'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allOverlays = snapshot.docs.map(doc => ({ ...doc.data() } as Overlay));
+      setActiveOverlays(allOverlays.filter(o => o.active));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'overlays');
     });
 
-    socket.on('overlays_updated', () => {
-      fetch('/api/overlays')
-        .then(res => res.json())
-        .then(data => {
-          setActiveOverlays(data.filter((o: Overlay) => o.active));
-        });
-    });
-
-    return () => {
-      socket.off('overlay_toggled');
-      socket.off('overlays_updated');
-    };
+    return () => unsubscribe();
   }, []);
 
   const getAnimationVariants = (type: string) => {

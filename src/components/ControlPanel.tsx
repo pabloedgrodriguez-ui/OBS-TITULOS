@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { Plus, Settings, Trash2, Edit2, Play, Square, Monitor, X, Activity, Shield, Zap, Layers, Layout, Palette, HelpCircle, ChevronRight, ChevronLeft, Globe, Cpu, ExternalLink, Clock, Menu, Copy } from 'lucide-react';
+import { Plus, Settings, Trash2, Edit2, Play, Square, Monitor, X, Activity, Shield, Zap, Layers, Layout, Palette, HelpCircle, ChevronRight, ChevronLeft, Globe, Cpu, ExternalLink, Clock, Menu, Copy, LogIn, LogOut, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Overlay } from '../types';
 import { cn } from '../lib/utils';
 import OverlayRenderer from './OverlayRenderer';
-
-const socket: Socket = io();
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const DEFAULT_OVERLAY: Partial<Overlay> = {
   name: '',
@@ -34,7 +34,8 @@ const DEFAULT_OVERLAY: Partial<Overlay> = {
   titleY: 0,
   subtitleX: 0,
   subtitleY: 0,
-  textAlign: 'left'
+  textAlign: 'left',
+  autoDeactivateDuration: 0
 };
 
 export default function ControlPanel() {
@@ -47,7 +48,8 @@ export default function ControlPanel() {
   const [previewScale, setPreviewScale] = useState(1);
   const previewRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'settings'>('dashboard');
-  const [isConnected, setIsConnected] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [systemStats, setSystemStats] = useState({
     cpu: 12,
@@ -58,24 +60,28 @@ export default function ControlPanel() {
 
   // Templates for the Library
   const TEMPLATES = [
-    { id: 't1', title: 'BREAKING NEWS', subtitle: 'COBERTURA ESPECIAL EN VIVO', layoutType: 'ticker', styleVariant: 'breaking', color: '#facc15', bgColor: '#7f1d1d', fontSizeTitle: 24, fontSizeSubtitle: 14, width: 1920, height: 60, positionX: 0, positionY: 94 },
-    { id: 't2', title: 'PREMIUM EVENT', subtitle: 'EXCLUSIVE BROADCAST', layoutType: 'ticker', styleVariant: 'premium', color: '#f59e0b', bgColor: '#09090b', fontSizeTitle: 22, fontSizeSubtitle: 12, width: 1920, height: 50, positionX: 0, positionY: 95 },
-    { id: 't3', title: 'MINIMALIST LIVE', subtitle: 'STREAMING NOW', layoutType: 'ticker', styleVariant: 'minimalista', color: '#ffffff', bgColor: '#000000', fontSizeTitle: 18, fontSizeSubtitle: 12, width: 1920, height: 40, positionX: 0, positionY: 96 },
-    { id: 't4', title: 'MODERN GRAFT', subtitle: 'DYNAMIC CONTENT', layoutType: 'graft', styleVariant: 'gradient', color: '#10b981', bgColor: '#09090b', fontSizeTitle: 48, fontSizeSubtitle: 18, width: 700, height: 180, positionX: 5, positionY: 80 },
-    { id: 't5', title: 'ELEGANT SERIF', subtitle: 'A Story of Excellence', layoutType: 'graft', styleVariant: 'italic-serif', color: '#ffffff', bgColor: '#18181b', fontSizeTitle: 56, fontSizeSubtitle: 24, width: 800, height: 200, positionX: 5, positionY: 75 },
-    { id: 't8', title: 'BIG ANNOUNCEMENT', subtitle: 'SPECIAL BROADCAST', layoutType: 'live-title', styleVariant: 'uppercase', color: '#ef4444', bgColor: 'transparent', fontSizeTitle: 120, fontSizeSubtitle: 16, positionX: 10, positionY: 50, width: 1500, height: 400 },
-    { id: 't6', title: 'SPORTS SCOREBOARD', subtitle: 'Q1', layoutType: 'sports-scoreboard', styleVariant: 'default', color: '#3b82f6', bgColor: '#18181b', fontSizeTitle: 24, fontSizeSubtitle: 16, width: 450, height: 80, positionX: 5, positionY: 5, customData: { teamA: 'HOME', teamB: 'AWAY', scoreA: 0, scoreB: 0, period: '1ST QTR' } },
-    { id: 't7', title: 'SOCIAL POPUP', subtitle: '@username', layoutType: 'social-popup', styleVariant: 'twitter', color: '#1da1f2', bgColor: '#ffffff', textColor: '#0f1419', fontSizeTitle: 20, fontSizeSubtitle: 16, width: 400, height: 100, positionX: 5, positionY: 85, customData: { platform: 'twitter', handle: '@streamer', message: 'Follow me for more updates!' } },
+    { id: 't1', title: 'BREAKING NEWS', subtitle: 'COBERTURA ESPECIAL EN VIVO', layoutType: 'ticker', styleVariant: 'breaking', color: '#facc15', bgColor: '#7f1d1d', fontSizeTitle: 24, fontSizeSubtitle: 14, width: 1920, height: 60, positionX: 0, positionY: 94, autoDeactivateDuration: 0 },
+    { id: 't2', title: 'PREMIUM EVENT', subtitle: 'EXCLUSIVE BROADCAST', layoutType: 'ticker', styleVariant: 'premium', color: '#f59e0b', bgColor: '#09090b', fontSizeTitle: 22, fontSizeSubtitle: 12, width: 1920, height: 50, positionX: 0, positionY: 95, autoDeactivateDuration: 0 },
+    { id: 't3', title: 'MINIMALIST LIVE', subtitle: 'STREAMING NOW', layoutType: 'ticker', styleVariant: 'minimalista', color: '#ffffff', bgColor: '#000000', fontSizeTitle: 18, fontSizeSubtitle: 12, width: 1920, height: 40, positionX: 0, positionY: 96, autoDeactivateDuration: 0 },
+    { id: 't4', title: 'MODERN GRAFT', subtitle: 'DYNAMIC CONTENT', layoutType: 'graft', styleVariant: 'gradient', color: '#10b981', bgColor: '#09090b', fontSizeTitle: 48, fontSizeSubtitle: 18, width: 700, height: 180, positionX: 5, positionY: 80, autoDeactivateDuration: 0 },
+    { id: 't5', title: 'ELEGANT SERIF', subtitle: 'A Story of Excellence', layoutType: 'graft', styleVariant: 'italic-serif', color: '#ffffff', bgColor: '#18181b', fontSizeTitle: 56, fontSizeSubtitle: 24, width: 800, height: 200, positionX: 5, positionY: 75, autoDeactivateDuration: 0 },
+    { id: 't8', title: 'BIG ANNOUNCEMENT', subtitle: 'SPECIAL BROADCAST', layoutType: 'live-title', styleVariant: 'uppercase', color: '#ef4444', bgColor: 'transparent', fontSizeTitle: 120, fontSizeSubtitle: 16, positionX: 10, positionY: 50, width: 1500, height: 400, autoDeactivateDuration: 0 },
+    { id: 't6', title: 'SPORTS SCOREBOARD', subtitle: 'Q1', layoutType: 'sports-scoreboard', styleVariant: 'default', color: '#3b82f6', bgColor: '#18181b', fontSizeTitle: 24, fontSizeSubtitle: 16, width: 450, height: 80, positionX: 5, positionY: 5, customData: { teamA: 'HOME', teamB: 'AWAY', scoreA: 0, scoreB: 0, period: '1ST QTR' }, autoDeactivateDuration: 0 },
+    { id: 't7', title: 'SOCIAL POPUP', subtitle: '@username', layoutType: 'social-popup', styleVariant: 'twitter', color: '#1da1f2', bgColor: '#ffffff', textColor: '#0f1419', fontSizeTitle: 20, fontSizeSubtitle: 16, width: 400, height: 100, positionX: 5, positionY: 85, customData: { platform: 'twitter', handle: '@streamer', message: 'Follow me for more updates!' }, autoDeactivateDuration: 0 },
   ];
 
   useEffect(() => {
-    fetchOverlays();
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsAuthReady(true);
+    });
 
-    socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => setIsConnected(false));
-    socket.on('overlays_updated', fetchOverlays);
-    socket.on('overlay_toggled', ({ id, active }) => {
-      setOverlays(prev => prev.map(o => o.id === id ? { ...o, active } : o));
+    const q = query(collection(db, 'overlays'), orderBy('name'));
+    const unsubscribeOverlays = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data() } as Overlay));
+      setOverlays(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'overlays');
     });
 
     const interval = setInterval(() => {
@@ -88,10 +94,8 @@ export default function ControlPanel() {
     }, 3000);
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('overlays_updated');
-      socket.off('overlay_toggled');
+      unsubscribeAuth();
+      unsubscribeOverlays();
       clearInterval(interval);
     };
   }, []);
@@ -142,15 +146,64 @@ export default function ControlPanel() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [overlays]);
 
-  const fetchOverlays = async () => {
-    const res = await fetch('/api/overlays');
-    const data = await res.json();
-    setOverlays(data);
+  const handleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
 
-  const handleToggle = (id: string, currentActive: boolean) => {
-    socket.emit('toggle_overlay', { id, active: !currentActive });
+  const handleLogout = async () => {
+    await signOut(auth);
   };
+
+  const handleToggle = async (id: string, currentActive: boolean) => {
+    try {
+      const active = !currentActive;
+      const overlayRef = doc(db, 'overlays', id);
+      
+      if (active) {
+        // Handle overlaps and timers on the client
+        const newOverlay = overlays.find(o => o.id === id);
+        if (newOverlay) {
+          // Deactivate overlapping
+          for (const existing of overlays) {
+            if (existing.active && existing.id !== id && checkOverlap(newOverlay, existing)) {
+              await updateDoc(doc(db, 'overlays', existing.id), { active: false });
+            }
+          }
+
+          // Set timer
+          if (newOverlay.autoDeactivateDuration && newOverlay.autoDeactivateDuration > 0) {
+            setTimeout(async () => {
+              await updateDoc(doc(db, 'overlays', id), { active: false });
+            }, newOverlay.autoDeactivateDuration * 1000);
+          }
+        }
+      }
+
+      await updateDoc(overlayRef, { active });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `overlays/${id}`);
+    }
+  };
+
+  // Helper to check if two overlays overlap (moved from server)
+  function checkOverlap(o1: any, o2: any) {
+    const getRect = (o: any) => {
+      const w = o.width || 800;
+      const h = o.height || 120;
+      if (o.layoutType === 'ticker') return { x: 0, y: 1080 - h, w: 1920, h: h };
+      const cx = (1920 * (o.positionX || 0)) / 100;
+      const cy = (1080 * (o.positionY || 0)) / 100;
+      return { x: cx - w / 2, y: cy - h / 2, w: w, h: h };
+    };
+    const r1 = getRect(o1);
+    const r2 = getRect(o2);
+    return !(r2.x >= r1.x + r1.w || r2.x + r2.w <= r1.x || r2.y >= r1.y + r1.h || r2.y + r2.h <= r1.y);
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -167,41 +220,46 @@ export default function ControlPanel() {
     e.preventDefault();
     if (!editingOverlay) return;
     
+    const id = editingOverlay.id || crypto.randomUUID();
     const overlayData = {
       ...editingOverlay,
-      id: editingOverlay.id || crypto.randomUUID(),
+      id,
       bgImage: bgImageBase64 || editingOverlay.bgImage || ''
     };
 
-    await fetch('/api/overlays', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(overlayData),
-    });
-
-    setIsModalOpen(false);
-    setEditingOverlay(null);
-    setBgImageBase64('');
+    try {
+      await setDoc(doc(db, 'overlays', id), overlayData);
+      setIsModalOpen(false);
+      setEditingOverlay(null);
+      setBgImageBase64('');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `overlays/${id}`);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/overlays/${id}`, { method: 'DELETE' });
-    setDeleteConfirmId(null);
+    try {
+      await deleteDoc(doc(db, 'overlays', id));
+      setDeleteConfirmId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `overlays/${id}`);
+    }
   };
 
   const handleCopy = async (overlay: Overlay) => {
+    const id = crypto.randomUUID();
     const newOverlay = {
       ...overlay,
-      id: crypto.randomUUID(),
+      id,
       name: `${overlay.name} (Copia)`,
       active: false
     };
 
-    await fetch('/api/overlays', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newOverlay),
-    });
+    try {
+      await setDoc(doc(db, 'overlays', id), newOverlay);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `overlays/${id}`);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -322,13 +380,13 @@ export default function ControlPanel() {
             >
               <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Status</p>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
-                <span className="text-xs font-medium">{isConnected ? 'Sistema Online' : 'Desconectado'}</span>
+                <div className={cn("w-2 h-2 rounded-full", isAuthReady ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                <span className="text-xs font-medium">{isAuthReady ? 'Sistema Online' : 'Conectando...'}</span>
               </div>
             </motion.div>
           ) : (
             <div className="flex justify-center">
-              <div className={cn("w-3 h-3 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500")} title={isConnected ? 'Online' : 'Offline'} />
+              <div className={cn("w-3 h-3 rounded-full", isAuthReady ? "bg-emerald-500 animate-pulse" : "bg-red-500")} title={isAuthReady ? 'Online' : 'Offline'} />
             </div>
           )}
           
@@ -370,6 +428,36 @@ export default function ControlPanel() {
           </div>
 
           <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3 mr-4">
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-bold text-zinc-900">{user.displayName}</span>
+                  <span className="text-[10px] text-zinc-500">{user.email}</span>
+                </div>
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-black/10" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-zinc-900">
+                    <User size={16} />
+                  </div>
+                )}
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all"
+                  title="Cerrar Sesión"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleLogin}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 mr-4"
+              >
+                <LogIn size={14} />
+                <span>Iniciar Sesión</span>
+              </button>
+            )}
             <button 
               onClick={() => window.open('/overlay', '_blank')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold uppercase tracking-widest transition-all border border-black/5"
@@ -491,6 +579,12 @@ export default function ControlPanel() {
                             {overlay.active && (
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             )}
+                            {overlay.autoDeactivateDuration > 0 && (
+                              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-zinc-100 border border-black/5 text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">
+                                <Clock size={8} />
+                                {overlay.autoDeactivateDuration}s
+                              </div>
+                            )}
                           </div>
                           <h3 className="text-lg font-bold text-zinc-900 mb-1">{overlay.name || 'Sin Nombre'}</h3>
                           <p className="text-sm text-zinc-500 line-clamp-1">{overlay.title}</p>
@@ -506,38 +600,54 @@ export default function ControlPanel() {
                             <div className="flex justify-between items-center">
                               <div className="flex items-center gap-2">
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const newScore = Math.max(0, (overlay.customData?.scoreA || 0) - 1);
-                                    const updatedOverlay = { ...overlay, customData: { ...overlay.customData, scoreA: newScore } };
-                                    socket.emit('update_overlay', updatedOverlay);
+                                    const updatedData = { ...overlay.customData, scoreA: newScore };
+                                    try {
+                                      await updateDoc(doc(db, 'overlays', overlay.id), { customData: updatedData });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                    }
                                   }}
                                   className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-700 flex items-center justify-center text-zinc-900"
                                 >-</button>
                                 <span className="font-mono font-bold w-6 text-center">{overlay.customData?.scoreA || 0}</span>
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const newScore = (overlay.customData?.scoreA || 0) + 1;
-                                    const updatedOverlay = { ...overlay, customData: { ...overlay.customData, scoreA: newScore } };
-                                    socket.emit('update_overlay', updatedOverlay);
+                                    const updatedData = { ...overlay.customData, scoreA: newScore };
+                                    try {
+                                      await updateDoc(doc(db, 'overlays', overlay.id), { customData: updatedData });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                    }
                                   }}
                                   className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-700 flex items-center justify-center text-zinc-900"
                                 >+</button>
                               </div>
                               <div className="flex items-center gap-2">
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const newScore = Math.max(0, (overlay.customData?.scoreB || 0) - 1);
-                                    const updatedOverlay = { ...overlay, customData: { ...overlay.customData, scoreB: newScore } };
-                                    socket.emit('update_overlay', updatedOverlay);
+                                    const updatedData = { ...overlay.customData, scoreB: newScore };
+                                    try {
+                                      await updateDoc(doc(db, 'overlays', overlay.id), { customData: updatedData });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                    }
                                   }}
                                   className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-700 flex items-center justify-center text-zinc-900"
                                 >-</button>
                                 <span className="font-mono font-bold w-6 text-center">{overlay.customData?.scoreB || 0}</span>
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const newScore = (overlay.customData?.scoreB || 0) + 1;
-                                    const updatedOverlay = { ...overlay, customData: { ...overlay.customData, scoreB: newScore } };
-                                    socket.emit('update_overlay', updatedOverlay);
+                                    const updatedData = { ...overlay.customData, scoreB: newScore };
+                                    try {
+                                      await updateDoc(doc(db, 'overlays', overlay.id), { customData: updatedData });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                    }
                                   }}
                                   className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-700 flex items-center justify-center text-zinc-900"
                                 >+</button>
@@ -558,8 +668,22 @@ export default function ControlPanel() {
                                   const updatedOverlay = { ...overlay, customData: { ...overlay.customData, handle: e.target.value } };
                                   setOverlays(prev => prev.map(o => o.id === overlay.id ? updatedOverlay : o));
                                 }}
-                                onBlur={() => socket.emit('update_overlay', overlay)}
-                                onKeyDown={(e) => e.key === 'Enter' && socket.emit('update_overlay', overlay)}
+                                onBlur={async () => {
+                                  try {
+                                    await updateDoc(doc(db, 'overlays', overlay.id), { customData: overlay.customData });
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                  }
+                                }}
+                                onKeyDown={async (e) => {
+                                  if (e.key === 'Enter') {
+                                    try {
+                                      await updateDoc(doc(db, 'overlays', overlay.id), { customData: overlay.customData });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.UPDATE, `overlays/${overlay.id}`);
+                                    }
+                                  }
+                                }}
                                 className="w-full bg-zinc-100 border border-black/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500/50"
                               />
                             </div>
@@ -677,9 +801,9 @@ export default function ControlPanel() {
                     <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.02] border border-black/5">
                       <span className="text-sm text-zinc-500">Status</span>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500" : "bg-red-500")} />
-                        <span className={cn("text-sm font-bold", isConnected ? "text-emerald-500" : "text-red-500")}>
-                          {isConnected ? 'CONECTADO' : 'DESCONECTADO'}
+                        <div className={cn("w-2 h-2 rounded-full", isAuthReady ? "bg-emerald-500" : "bg-red-500")} />
+                        <span className={cn("text-sm font-bold", isAuthReady ? "text-emerald-500" : "text-red-500")}>
+                          {isAuthReady ? 'CONECTADO' : 'DESCONECTADO'}
                         </span>
                       </div>
                     </div>
@@ -988,6 +1112,22 @@ export default function ControlPanel() {
                               onChange={handleInputChange}
                               className="w-full bg-zinc-100/50 border border-black/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all font-medium"
                             />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                              <Clock size={10} />
+                              Auto Desactivación (Segundos)
+                            </label>
+                            <input 
+                              type="number"
+                              name="autoDeactivateDuration"
+                              value={editingOverlay?.autoDeactivateDuration || 0}
+                              onChange={handleInputChange}
+                              min="0"
+                              className="w-full bg-zinc-100/50 border border-black/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all font-mono font-bold text-emerald-500"
+                              placeholder="0 = Desactivado"
+                            />
+                            <p className="text-[9px] text-zinc-400 italic ml-1">El zócalo se apagará automáticamente después de este tiempo. 0 para manual.</p>
                           </div>
                         </div>
                     </section>

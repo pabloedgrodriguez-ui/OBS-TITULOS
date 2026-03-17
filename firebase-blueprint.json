@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Overlay": {
+      "title": "Overlay",
+      "description": "A graphical overlay for a stream (zócalo).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier." },
+        "name": { "type": "string", "description": "Internal name of the overlay." },
+        "title": { "type": "string", "description": "Main title text." },
+        "subtitle": { "type": "string", "description": "Secondary subtitle text." },
+        "color": { "type": "string", "description": "Primary accent color." },
+        "active": { "type": "boolean", "description": "Whether the overlay is currently visible." },
+        "fontSizeTitle": { "type": "number", "description": "Font size for the title." },
+        "fontSizeSubtitle": { "type": "number", "description": "Font size for the subtitle." },
+        "bgColor": { "type": "string", "description": "Background color." },
+        "textColor": { "type": "string", "description": "Text color." },
+        "positionX": { "type": "number", "description": "Horizontal position percentage." },
+        "positionY": { "type": "number", "description": "Vertical position percentage." },
+        "animationType": { "type": "string", "enum": ["slide-left", "slide-right", "fade", "zoom"] },
+        "layoutType": { "type": "string", "enum": ["standard", "graft", "minimal", "ticker", "sports-scoreboard", "social-popup", "live-title"] },
+        "styleVariant": { "type": "string", "description": "Visual style variant." },
+        "fontFamily": { "type": "string", "enum": ["sans", "serif", "mono"] },
+        "borderRadius": { "type": "number", "description": "Corner radius." },
+        "width": { "type": "number", "description": "Width in pixels." },
+        "height": { "type": "number", "description": "Height in pixels." },
+        "rotation": { "type": "number", "description": "Rotation in degrees." },
+        "bgImage": { "type": "string", "description": "Base64 background image." },
+        "shortcut": { "type": "string", "description": "Keyboard shortcut key." },
+        "customData": { "type": "object", "description": "Additional layout-specific data." },
+        "titleX": { "type": "number", "description": "Title X offset." },
+        "titleY": { "type": "number", "description": "Title Y offset." },
+        "subtitleX": { "type": "number", "description": "Subtitle X offset." },
+        "subtitleY": { "type": "number", "description": "Subtitle Y offset." },
+        "textAlign": { "type": "string", "enum": ["left", "center", "right"] },
+        "autoDeactivateDuration": { "type": "number", "description": "Auto-deactivation timer in seconds." }
+      },
+      "required": ["id", "name", "title", "active"]
+    }
+  },
+  "firestore": {
+    "/overlays/{overlayId}": {
+      "schema": "Overlay",
+      "description": "Collection of stream overlays."
+    }
+  }
+}
