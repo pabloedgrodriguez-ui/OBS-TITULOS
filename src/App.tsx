@@ -46,6 +46,22 @@ function LoginScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+
+  const MASTER_PASSWORD = "123456";
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === MASTER_PASSWORD) {
+      setIsUnlocked(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      setTimeout(() => setPasswordError(false), 2000);
+    }
+  };
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
@@ -88,51 +104,97 @@ function LoginScreen() {
 
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Overlay Studio</h1>
-            <p className="text-zinc-400 text-sm">Inicia sesión para gestionar tus overlays en tiempo real</p>
+            <p className="text-zinc-400 text-sm">
+              {!isUnlocked ? 'Introduce la clave de acceso' : 'Inicia sesión para gestionar tus overlays'}
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <button
-              onClick={handleLogin}
-              disabled={isLoggingIn}
-              className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-black rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              {isLoggingIn ? (
-                <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-              ) : (
-                <LogIn size={18} />
-              )}
-              <span>{isLoggingIn ? 'Conectando...' : 'Entrar con Google'}</span>
-            </button>
-
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center"
+          <AnimatePresence mode="wait">
+            {!isUnlocked ? (
+              <motion.form 
+                key="password-form"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                onSubmit={handlePasswordSubmit}
+                className="space-y-4"
               >
-                {error}
-                <button 
-                  onClick={() => setShowDebug(!showDebug)} 
-                  className="block w-full mt-2 text-[10px] underline opacity-50 hover:opacity-100"
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Clave de acceso"
+                    className={`w-full px-6 py-4 bg-white/5 border ${passwordError ? 'border-red-500' : 'border-white/10'} rounded-2xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all text-center tracking-[0.5em] font-mono`}
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center mt-2"
+                    >
+                      Clave Incorrecta
+                    </motion.p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-zinc-900 rounded-2xl font-bold text-sm uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
                 >
-                  {showDebug ? 'Ocultar info técnica' : 'Ver info técnica'}
+                  Verificar Clave
                 </button>
-              </motion.div>
-            )}
-
-            {showDebug && (
+              </motion.form>
+            ) : (
               <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-4 bg-black/40 rounded-xl font-mono text-[10px] text-zinc-500 break-all"
+                key="login-options"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-4"
               >
-                URL: {window.location.origin}<br />
-                AuthDomain: {auth.config.authDomain}
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoggingIn}
+                  className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-black rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                  {isLoggingIn ? (
+                    <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  ) : (
+                    <LogIn size={18} />
+                  )}
+                  <span>{isLoggingIn ? 'Conectando...' : 'Entrar con Google'}</span>
+                </button>
+
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center"
+                  >
+                    {error}
+                    <button 
+                      onClick={() => setShowDebug(!showDebug)} 
+                      className="block w-full mt-2 text-[10px] underline opacity-50 hover:opacity-100"
+                    >
+                      {showDebug ? 'Ocultar info técnica' : 'Ver info técnica'}
+                    </button>
+                  </motion.div>
+                )}
+
+                {showDebug && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-black/40 rounded-xl font-mono text-[10px] text-zinc-500 break-all"
+                  >
+                    URL: {window.location.origin}<br />
+                    AuthDomain: {auth.config.authDomain}
+                  </motion.div>
+                )}
               </motion.div>
             )}
-          </div>
+          </AnimatePresence>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex justify-between items-center px-2">
             <div className="flex items-center gap-2 text-zinc-500">
