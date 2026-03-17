@@ -45,6 +45,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 function LoginScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
@@ -54,7 +55,13 @@ function LoginScreen() {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || "Error al iniciar sesión");
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("Error: Dominio no autorizado. He iniciado una re-sincronización del sistema. Por favor, acepta los términos en la ventana que apareció arriba.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Error: Ventana emergente bloqueada. Por favor, permite los pop-ups en tu navegador.");
+      } else {
+        setError(err.message || "Error al iniciar sesión");
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -106,6 +113,23 @@ function LoginScreen() {
                 className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center"
               >
                 {error}
+                <button 
+                  onClick={() => setShowDebug(!showDebug)} 
+                  className="block w-full mt-2 text-[10px] underline opacity-50 hover:opacity-100"
+                >
+                  {showDebug ? 'Ocultar info técnica' : 'Ver info técnica'}
+                </button>
+              </motion.div>
+            )}
+
+            {showDebug && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 bg-black/40 rounded-xl font-mono text-[10px] text-zinc-500 break-all"
+              >
+                URL: {window.location.origin}<br />
+                AuthDomain: {auth.config.authDomain}
               </motion.div>
             )}
           </div>

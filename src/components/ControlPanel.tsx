@@ -49,10 +49,7 @@ export default function ControlPanel() {
   const previewRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'settings'>('dashboard');
   const [user, setUser] = useState<any>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [systemStats, setSystemStats] = useState({
     cpu: 12,
     ram: 45,
@@ -75,7 +72,6 @@ export default function ControlPanel() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      setIsAuthReady(true);
     });
 
     const q = query(collection(db, 'overlays'), orderBy('name'));
@@ -147,20 +143,6 @@ export default function ControlPanel() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [overlays]);
-
-  const handleLogin = async () => {
-    setLoginError(null);
-    setIsLoggingIn(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      setLoginError(error.message || "Error al iniciar sesión");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -387,13 +369,13 @@ export default function ControlPanel() {
             >
               <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Status</p>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", isAuthReady ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
-                <span className="text-xs font-medium">{isAuthReady ? 'Sistema Online' : 'Conectando...'}</span>
+                <div className={cn("w-2 h-2 rounded-full", !!user ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                <span className="text-xs font-medium">{!!user ? 'Sistema Online' : 'Conectando...'}</span>
               </div>
             </motion.div>
           ) : (
             <div className="flex justify-center">
-              <div className={cn("w-3 h-3 rounded-full", isAuthReady ? "bg-emerald-500 animate-pulse" : "bg-red-500")} title={isAuthReady ? 'Online' : 'Offline'} />
+              <div className={cn("w-3 h-3 rounded-full", !!user ? "bg-emerald-500 animate-pulse" : "bg-red-500")} title={!!user ? 'Online' : 'Offline'} />
             </div>
           )}
           
@@ -435,12 +417,7 @@ export default function ControlPanel() {
           </div>
 
           <div className="flex items-center gap-3">
-            {loginError && (
-              <div className="absolute top-full mt-2 right-0 bg-red-50 text-red-600 text-[10px] px-3 py-1.5 rounded-lg border border-red-100 shadow-sm whitespace-nowrap z-50">
-                {loginError}
-              </div>
-            )}
-            {user ? (
+            {user && (
               <div className="flex items-center gap-3 mr-4">
                 <div className="flex flex-col items-end">
                   <span className="text-xs font-bold text-zinc-900">{user.displayName}</span>
@@ -461,18 +438,6 @@ export default function ControlPanel() {
                   <LogOut size={18} />
                 </button>
               </div>
-            ) : (
-              <button 
-                onClick={handleLogin}
-                disabled={isLoggingIn}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-900 text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 mr-4",
-                  isLoggingIn ? "bg-emerald-700 cursor-wait" : "bg-emerald-600 hover:bg-emerald-500"
-                )}
-              >
-                <LogIn size={14} className={isLoggingIn ? "animate-spin" : ""} />
-                <span>{isLoggingIn ? 'Iniciando...' : 'Iniciar Sesión'}</span>
-              </button>
             )}
             <button 
               onClick={() => window.open('/?view=overlay', '_blank')}
@@ -817,9 +782,9 @@ export default function ControlPanel() {
                     <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.02] border border-black/5">
                       <span className="text-sm text-zinc-500">Status</span>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", isAuthReady ? "bg-emerald-500" : "bg-red-500")} />
-                        <span className={cn("text-sm font-bold", isAuthReady ? "text-emerald-500" : "text-red-500")}>
-                          {isAuthReady ? 'CONECTADO' : 'DESCONECTADO'}
+                        <div className={cn("w-2 h-2 rounded-full", !!user ? "bg-emerald-500" : "bg-red-500")} />
+                        <span className={cn("text-sm font-bold", !!user ? "text-emerald-500" : "text-red-500")}>
+                          {!!user ? 'CONECTADO' : 'DESCONECTADO'}
                         </span>
                       </div>
                     </div>
