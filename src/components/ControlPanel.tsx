@@ -17,6 +17,7 @@ const DEFAULT_OVERLAY: Partial<Overlay> = {
   fontSizeTitle: 36,
   fontSizeSubtitle: 20,
   bgColor: '#18181b',
+  bgOpacity: 0.8,
   textColor: '#ffffff',
   positionX: 5,
   positionY: 85,
@@ -51,6 +52,7 @@ export default function ControlPanel() {
   const [user, setUser] = useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [systemStats, setSystemStats] = useState({
     cpu: 12,
     ram: 45,
@@ -60,15 +62,15 @@ export default function ControlPanel() {
 
   // Templates for the Library
   const TEMPLATES = [
-    { id: 't1', title: 'BREAKING NEWS', subtitle: 'COBERTURA ESPECIAL EN VIVO', layoutType: 'ticker', styleVariant: 'breaking', color: '#facc15', bgColor: '#7f1d1d', fontSizeTitle: 24, fontSizeSubtitle: 14, width: 1920, height: 60, positionX: 0, positionY: 94, autoDeactivateDuration: 0 },
-    { id: 't2', title: 'PREMIUM EVENT', subtitle: 'EXCLUSIVE BROADCAST', layoutType: 'ticker', styleVariant: 'premium', color: '#f59e0b', bgColor: '#09090b', fontSizeTitle: 22, fontSizeSubtitle: 12, width: 1920, height: 50, positionX: 0, positionY: 95, autoDeactivateDuration: 0 },
-    { id: 't3', title: 'MINIMALIST LIVE', subtitle: 'STREAMING NOW', layoutType: 'ticker', styleVariant: 'minimalista', color: '#ffffff', bgColor: '#000000', fontSizeTitle: 18, fontSizeSubtitle: 12, width: 1920, height: 40, positionX: 0, positionY: 96, autoDeactivateDuration: 0 },
-    { id: 't4', title: 'MODERN GRAFT', subtitle: 'DYNAMIC CONTENT', layoutType: 'graft', styleVariant: 'gradient', color: '#10b981', bgColor: '#09090b', fontSizeTitle: 48, fontSizeSubtitle: 18, width: 700, height: 180, positionX: 5, positionY: 80, autoDeactivateDuration: 0 },
-    { id: 't5', title: 'ELEGANT SERIF', subtitle: 'A Story of Excellence', layoutType: 'graft', styleVariant: 'italic-serif', color: '#ffffff', bgColor: '#18181b', fontSizeTitle: 56, fontSizeSubtitle: 24, width: 800, height: 200, positionX: 5, positionY: 75, autoDeactivateDuration: 0 },
-    { id: 't8', title: 'BIG ANNOUNCEMENT', subtitle: 'SPECIAL BROADCAST', layoutType: 'live-title', styleVariant: 'uppercase', color: '#ef4444', bgColor: 'transparent', fontSizeTitle: 120, fontSizeSubtitle: 16, positionX: 10, positionY: 50, width: 1500, height: 400, autoDeactivateDuration: 0 },
-    { id: 't6', title: 'SPORTS SCOREBOARD', subtitle: 'Q1', layoutType: 'sports-scoreboard', styleVariant: 'default', color: '#3b82f6', bgColor: '#18181b', fontSizeTitle: 24, fontSizeSubtitle: 16, width: 450, height: 80, positionX: 5, positionY: 5, customData: { teamA: 'HOME', teamB: 'AWAY', scoreA: 0, scoreB: 0, period: '1ST QTR' }, autoDeactivateDuration: 0 },
-    { id: 't7', title: 'SOCIAL POPUP', subtitle: '@username', layoutType: 'social-popup', styleVariant: 'twitter', color: '#1da1f2', bgColor: '#ffffff', textColor: '#0f1419', fontSizeTitle: 20, fontSizeSubtitle: 16, width: 400, height: 100, positionX: 5, positionY: 85, customData: { platform: 'twitter', handle: '@streamer', message: 'Follow me for more updates!' }, autoDeactivateDuration: 0 },
-    { id: 't9', title: 'FONDO FULL HD', subtitle: '', layoutType: 'background-only', styleVariant: 'default', color: '#10b981', bgColor: '#000000', width: 1920, height: 1080, positionX: 50, positionY: 50, autoDeactivateDuration: 0 },
+    { id: 't1', title: 'BREAKING NEWS', subtitle: 'COBERTURA ESPECIAL EN VIVO', layoutType: 'ticker', styleVariant: 'breaking', color: '#facc15', bgColor: '#7f1d1d', bgOpacity: 0.9, fontSizeTitle: 24, fontSizeSubtitle: 14, width: 1920, height: 60, positionX: 0, positionY: 94, autoDeactivateDuration: 0 },
+    { id: 't2', title: 'PREMIUM EVENT', subtitle: 'EXCLUSIVE BROADCAST', layoutType: 'ticker', styleVariant: 'premium', color: '#f59e0b', bgColor: '#09090b', bgOpacity: 0.9, fontSizeTitle: 22, fontSizeSubtitle: 12, width: 1920, height: 50, positionX: 0, positionY: 95, autoDeactivateDuration: 0 },
+    { id: 't3', title: 'MINIMALIST LIVE', subtitle: 'STREAMING NOW', layoutType: 'ticker', styleVariant: 'minimalista', color: '#ffffff', bgColor: '#000000', bgOpacity: 0.2, fontSizeTitle: 18, fontSizeSubtitle: 12, width: 1920, height: 40, positionX: 0, positionY: 96, autoDeactivateDuration: 0 },
+    { id: 't4', title: 'MODERN GRAFT', subtitle: 'DYNAMIC CONTENT', layoutType: 'graft', styleVariant: 'gradient', color: '#10b981', bgColor: '#09090b', bgOpacity: 0.8, fontSizeTitle: 48, fontSizeSubtitle: 18, width: 700, height: 180, positionX: 5, positionY: 80, autoDeactivateDuration: 0 },
+    { id: 't5', title: 'ELEGANT SERIF', subtitle: 'A Story of Excellence', layoutType: 'graft', styleVariant: 'italic-serif', color: '#ffffff', bgColor: '#18181b', bgOpacity: 0.8, fontSizeTitle: 56, fontSizeSubtitle: 24, width: 800, height: 200, positionX: 5, positionY: 75, autoDeactivateDuration: 0 },
+    { id: 't8', title: 'BIG ANNOUNCEMENT', subtitle: 'SPECIAL BROADCAST', layoutType: 'live-title', styleVariant: 'uppercase', color: '#ef4444', bgColor: 'transparent', bgOpacity: 0.4, fontSizeTitle: 120, fontSizeSubtitle: 16, positionX: 10, positionY: 50, width: 1500, height: 400, autoDeactivateDuration: 0 },
+    { id: 't6', title: 'SPORTS SCOREBOARD', subtitle: 'Q1', layoutType: 'sports-scoreboard', styleVariant: 'default', color: '#3b82f6', bgColor: '#18181b', bgOpacity: 0.9, fontSizeTitle: 24, fontSizeSubtitle: 16, width: 450, height: 80, positionX: 5, positionY: 5, customData: { teamA: 'HOME', teamB: 'AWAY', scoreA: 0, scoreB: 0, period: '1ST QTR' }, autoDeactivateDuration: 0 },
+    { id: 't7', title: 'SOCIAL POPUP', subtitle: '@username', layoutType: 'social-popup', styleVariant: 'twitter', color: '#1da1f2', bgColor: '#ffffff', bgOpacity: 0.9, textColor: '#0f1419', fontSizeTitle: 20, fontSizeSubtitle: 16, width: 400, height: 100, positionX: 5, positionY: 85, customData: { platform: 'twitter', handle: '@streamer', message: 'Follow me for more updates!' }, autoDeactivateDuration: 0 },
+    { id: 't9', title: 'FONDO FULL HD', subtitle: '', layoutType: 'background-only', styleVariant: 'default', color: '#10b981', bgColor: '#000000', bgOpacity: 1, width: 1920, height: 1080, positionX: 50, positionY: 50, autoDeactivateDuration: 0 },
   ];
 
   useEffect(() => {
@@ -212,9 +214,20 @@ export default function ControlPanel() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('La imagen es demasiado grande. Máximo 2MB.');
+        return;
+      }
+      
+      setIsUploading(true);
       const reader = new FileReader();
       reader.onloadend = () => {
         setBgImageBase64(reader.result as string);
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Error al cargar la imagen.');
+        setIsUploading(false);
       };
       reader.readAsDataURL(file);
     }
@@ -1363,7 +1376,21 @@ export default function ControlPanel() {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Fondo</label>
-                          <input type="color" name="bgColor" value={editingOverlay?.bgColor || '#18181b'} onChange={handleInputChange} className="w-full h-12 bg-zinc-100/50 border border-black/5 rounded-xl p-1 cursor-pointer" />
+                          <div className="flex gap-2">
+                            <input type="color" name="bgColor" value={editingOverlay?.bgColor || '#18181b'} onChange={handleInputChange} className="flex-1 h-12 bg-zinc-100/50 border border-black/5 rounded-xl p-1 cursor-pointer" />
+                            <div className="flex flex-col justify-center gap-1 min-w-[80px]">
+                              <span className="text-[8px] font-bold text-zinc-400 uppercase text-center">Opacidad: {Math.round((editingOverlay?.bgOpacity || 0.8) * 100)}%</span>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.01" 
+                                value={editingOverlay?.bgOpacity || 0.8} 
+                                onChange={(e) => setEditingOverlay({ ...editingOverlay, bgOpacity: parseFloat(e.target.value) })}
+                                className="w-full accent-emerald-500 h-1"
+                              />
+                            </div>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Texto</label>
@@ -1401,9 +1428,22 @@ export default function ControlPanel() {
                                 onChange={handleImageUpload}
                                 className="absolute inset-0 opacity-0 cursor-pointer"
                               />
-                              <button type="button" className="h-full px-4 bg-zinc-100 border border-black/5 rounded-xl text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-2">
-                                <Layers size={16} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Subir</span>
+                              <button 
+                                type="button" 
+                                disabled={isUploading}
+                                className={cn(
+                                  "h-full px-4 bg-zinc-100 border border-black/5 rounded-xl text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-2",
+                                  isUploading && "opacity-50 cursor-not-allowed"
+                                )}
+                              >
+                                {isUploading ? (
+                                  <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                ) : (
+                                  <Layers size={16} />
+                                )}
+                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                  {isUploading ? 'Cargando...' : 'Subir'}
+                                </span>
                               </button>
                             </div>
                             {(bgImageBase64 || editingOverlay?.bgImage) && (

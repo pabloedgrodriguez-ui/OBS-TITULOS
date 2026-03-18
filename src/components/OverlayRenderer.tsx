@@ -18,6 +18,13 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
 
   if (!overlay) return null;
 
+  const getOpacityHex = (opacity: number = 0.8) => {
+    const hex = Math.round(opacity * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  const bgOpacityHex = getOpacityHex(overlay.bgOpacity);
+
   return (
     <div 
       className={cn(
@@ -48,7 +55,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
           <div 
             className="p-8 pr-16 border border-white/10 backdrop-blur-2xl bg-cover bg-center bg-no-repeat glass-dark"
             style={{ 
-              backgroundColor: overlay.bgColor + 'cc',
+              backgroundColor: overlay.bgColor ? overlay.bgColor + bgOpacityHex : '#18181bcc',
               backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
               borderTopRightRadius: `${overlay.borderRadius}px`,
               borderBottomRightRadius: `${overlay.borderRadius}px`,
@@ -98,7 +105,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
             justifyContent: 'center',
             borderRadius: `${overlay.borderRadius}px`,
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
-            backgroundColor: overlay.bgImage ? 'transparent' : (overlay.bgColor ? overlay.bgColor + '44' : 'transparent')
+            backgroundColor: overlay.bgImage ? 'transparent' : (overlay.bgColor ? overlay.bgColor + bgOpacityHex : 'transparent')
           }}
         >
           <div className="flex items-center gap-4">
@@ -154,7 +161,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
             overlay.styleVariant === 'gradient' && "border-none"
           )}
           style={{ 
-            backgroundColor: overlay.styleVariant === 'outline' ? 'transparent' : overlay.bgColor + 'dd',
+            backgroundColor: overlay.styleVariant === 'outline' ? 'transparent' : (overlay.bgColor ? overlay.bgColor + bgOpacityHex : '#000000dd'),
             borderColor: overlay.color,
             borderRadius: `${overlay.borderRadius}px`,
             width: overlay.width && overlay.width > 0 ? `${overlay.width}px` : '450px',
@@ -220,7 +227,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
             justifyContent: 'center',
             borderRadius: `${overlay.borderRadius}px`,
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
-            backgroundColor: overlay.bgImage ? 'transparent' : 'transparent'
+            backgroundColor: overlay.bgImage ? 'transparent' : (overlay.bgColor ? overlay.bgColor + bgOpacityHex : 'transparent')
           }}
         >
           <div className="flex items-center gap-3">
@@ -258,7 +265,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
           className="flex flex-col overflow-hidden shadow-2xl bg-cover bg-center bg-no-repeat"
           style={{ 
             borderRadius: `${overlay.borderRadius}px`,
-            backgroundColor: overlay.bgColor + 'ee',
+            backgroundColor: overlay.bgColor ? overlay.bgColor + bgOpacityHex : '#18181bee',
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
             color: overlay.textColor,
             width: overlay.width && overlay.width > 0 ? `${overlay.width}px` : 'auto',
@@ -304,7 +311,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
           className="flex items-center gap-4 py-3 px-4 pr-8 shadow-2xl backdrop-blur-xl bg-cover bg-center bg-no-repeat"
           style={{ 
             borderRadius: `${overlay.borderRadius}px`,
-            backgroundColor: overlay.bgColor + 'ee',
+            backgroundColor: overlay.bgColor ? overlay.bgColor + bgOpacityHex : '#18181bee',
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
             color: overlay.textColor,
             borderLeft: `6px solid ${overlay.color}`,
@@ -360,7 +367,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
             overlay.styleVariant === 'minimalista' && "bg-zinc-950/20 backdrop-blur-3xl border-t border-white/5 shadow-none"
           )}
           style={{ 
-            backgroundColor: overlay.styleVariant === 'default' ? overlay.bgColor + 'ee' : undefined,
+            backgroundColor: overlay.styleVariant === 'default' ? (overlay.bgColor ? overlay.bgColor + bgOpacityHex : '#000000ee') : undefined,
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : undefined,
             borderColor: overlay.styleVariant === 'default' ? overlay.color + '88' : undefined,
             color: overlay.textColor,
@@ -422,7 +429,7 @@ export default function OverlayRenderer({ overlay, isPreview = false }: OverlayR
             borderRadius: `${overlay.borderRadius || 0}px`,
             backgroundImage: overlay.bgImage ? `url(${overlay.bgImage})` : 'none',
             backgroundColor: overlay.bgColor || 'transparent',
-            opacity: overlay.styleVariant === 'overlay' ? 0.5 : 1,
+            opacity: overlay.bgOpacity ?? (overlay.styleVariant === 'overlay' ? 0.5 : 1),
             boxShadow: overlay.styleVariant === 'glow' ? `0 0 50px ${overlay.color}44` : 'none',
             border: overlay.styleVariant === 'border' ? `4px solid ${overlay.color}` : 'none'
           }}

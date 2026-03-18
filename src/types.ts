@@ -9,6 +9,7 @@ export interface Overlay {
   fontSizeTitle: number;
   fontSizeSubtitle: number;
   bgColor: string;
+  bgOpacity: number;
   textColor: string;
   positionX: number;
   positionY: number;
