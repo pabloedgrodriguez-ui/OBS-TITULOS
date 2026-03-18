@@ -3,11 +3,17 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Overlay } from '../types';
 import OverlayRenderer from './OverlayRenderer';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 export default function OverlayView() {
   const [activeOverlays, setActiveOverlays] = useState<Overlay[]>([]);
   const [scale, setScale] = useState(1);
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setUid(params.get('uid'));
+  }, []);
 
   useEffect(() => {
     // Set body background to transparent for OBS
@@ -42,7 +48,13 @@ export default function OverlayView() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'overlays'));
+    if (!uid) return;
+
+    const q = query(
+      collection(db, 'overlays'),
+      where('uid', '==', uid)
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allOverlays = snapshot.docs.map(doc => ({ ...doc.data() } as Overlay));
       setActiveOverlays(allOverlays.filter(o => o.active));
@@ -51,7 +63,7 @@ export default function OverlayView() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [uid]);
 
   const getAnimationVariants = (type: string) => {
     switch (type) {

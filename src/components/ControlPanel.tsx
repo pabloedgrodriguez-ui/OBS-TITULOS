@@ -5,7 +5,7 @@ import { Overlay } from '../types';
 import { cn } from '../lib/utils';
 import OverlayRenderer from './OverlayRenderer';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, orderBy, where } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const DEFAULT_OVERLAY: Partial<Overlay> = {
@@ -76,14 +76,6 @@ export default function ControlPanel() {
       setUser(user);
     });
 
-    const q = query(collection(db, 'overlays'), orderBy('name'));
-    const unsubscribeOverlays = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data() } as Overlay));
-      setOverlays(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'overlays');
-    });
-
     const interval = setInterval(() => {
       setSystemStats(prev => ({
         ...prev,
@@ -95,10 +87,31 @@ export default function ControlPanel() {
 
     return () => {
       unsubscribeAuth();
-      unsubscribeOverlays();
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setOverlays([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'overlays'), 
+      where('uid', '==', user.uid),
+      orderBy('name')
+    );
+    
+    const unsubscribeOverlays = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data() } as Overlay));
+      setOverlays(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'overlays');
+    });
+
+    return () => unsubscribeOverlays();
+  }, [user]);
 
   useEffect(() => {
     if (!previewRef.current || !isModalOpen) return;
@@ -215,6 +228,7 @@ export default function ControlPanel() {
     const overlayData = {
       ...editingOverlay,
       id,
+      uid: user?.uid,
       bgImage: bgImageBase64 || editingOverlay.bgImage || ''
     };
 
@@ -242,6 +256,7 @@ export default function ControlPanel() {
     const newOverlay = {
       ...overlay,
       id,
+      uid: user?.uid,
       name: `${overlay.name} (Copia)`,
       active: false
     };
@@ -448,7 +463,7 @@ export default function ControlPanel() {
               </div>
             )}
             <button 
-              onClick={() => window.open('/?view=overlay', '_blank')}
+              onClick={() => window.open(`/?view=overlay&uid=${user?.uid}`, '_blank')}
               className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold uppercase tracking-widest transition-all border border-black/5"
             >
               <ExternalLink size={14} />

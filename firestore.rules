@@ -57,6 +57,10 @@ service cloud.firestore {
           (request.auth.token.email == "pabloedgrodriguez@gmail.com" && request.auth.token.email_verified == true));
     }
 
+    function isOwner(uid) {
+      return isAuthenticated() && (request.auth.uid == uid || (uid == null && isAdmin()));
+    }
+
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
@@ -105,7 +109,8 @@ service cloud.firestore {
         (!('subtitleX' in data) || (data.subtitleX is number)) &&
         (!('subtitleY' in data) || (data.subtitleY is number)) &&
         (!('textAlign' in data) || (data.textAlign is string)) &&
-        (!('autoDeactivateDuration' in data) || (data.autoDeactivateDuration is number));
+        (!('autoDeactivateDuration' in data) || (data.autoDeactivateDuration is number)) &&
+        (!('uid' in data) || (data.uid is string));
     }
 
     // ===============================================================
@@ -116,10 +121,17 @@ service cloud.firestore {
       // Allow public read (necessary for OBS integration and public overlay view)
       allow read: if true;
       
-      // Allow write only for admins
-      allow create: if isAdmin() && isValidOverlay(request.resource.data);
-      allow update: if isAdmin() && isValidOverlay(request.resource.data);
-      allow delete: if isAdmin();
+      // Allow create if authenticated and setting own uid
+      allow create: if isAuthenticated() && 
+        request.resource.data.uid == request.auth.uid && 
+        isValidOverlay(request.resource.data);
+        
+      // Allow update/delete if owner or admin
+      allow update: if (isOwner(resource.data.uid) || isAdmin()) && 
+        isValidOverlay(request.resource.data) &&
+        request.resource.data.uid == resource.data.uid;
+        
+      allow delete: if isOwner(resource.data.uid) || isAdmin();
     }
 
     match /users/{userId} {

@@ -30,4 +30,5 @@ export interface Overlay {
   subtitleY?: number;
   textAlign?: 'left' | 'center' | 'right';
   autoDeactivateDuration?: number; // in seconds, 0 means no auto-deactivation
+  uid?: string; // User ID who owns this overlay
 }

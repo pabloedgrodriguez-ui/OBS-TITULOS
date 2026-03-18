@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ControlPanel from './components/ControlPanel';
 import OverlayView from './components/OverlayView';
-import { auth } from './firebase';
+import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { LogIn, Shield, Zap, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -230,9 +231,25 @@ export default function App() {
 
     window.addEventListener('popstate', handleLocationChange);
     
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setIsAuthReady(true);
+      
+      if (user) {
+        // Ensure user document exists
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            role: 'user',
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
     });
 
     return () => {
